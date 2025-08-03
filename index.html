@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>National Home Remodeling Cost Estimator</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/babel-standalone@7.22.9/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+  <div id="root"></div>
+  <script type="text/babel">
+    function CostEstimator() {
+      const [projectType, setProjectType] = React.useState('Bathroom Remodel');
+      const [projectSize, setProjectSize] = React.useState('Small');
+      const [zipCode, setZipCode] = React.useState('');
+      const [email, setEmail] = React.useState('');
+      const [costEstimate, setCostEstimate] = React.useState('');
+      const [message, setMessage] = React.useState('');
+
+      const calculateCost = () => {
+        if (!zipCode || !email) {
+          setMessage('Please fill in all fields.');
+          return;
+        }
+
+        // Base costs (per sq ft, national average)
+        const baseCosts = {
+          'Bathroom Remodel': { Small: 50, Medium: 75, Large: 100 },
+          'Kitchen Remodel': { Small: 100, Medium: 150, Large: 200 }
+        };
+
+        // Material costs (Home Depot estimates, national baseline)
+        const materialCosts = {
+          'Bathroom Remodel': { Small: 8000, Medium: 12000, Large: 18000 },
+          'Kitchen Remodel': { Small: 12000, Medium: 20000, Large: 30000 }
+        };
+
+        // Prevailing wage rates (national average, $/hour)
+        const laborRate = 40; // Avg: carpenters $35–$50, electricians $40–$60, laborers $25–$40
+        const laborHours = {
+          'Bathroom Remodel': { Small: 80, Medium: 120, Large: 160 },
+          'Kitchen Remodel': { Small: 120, Medium: 180, Large: 240 }
+        };
+
+        // ZIP code adjustments (based on RSMeans CCI, SF as reference)
+        const zipAdjustments = {
+          '94123': 1.3,  // San Francisco (Marina, 30% above national avg)
+          '10001': 1.25, // New York City (Manhattan)
+          '60614': 1.1,  // Chicago (Lincoln Park)
+          '90210': 1.2,  // Los Angeles (Beverly Hills)
+          default: 1.0   // National average
+        };
+
+        // CPI adjustment (national avg ~330, SF ~360)
+        const cpiFactor = zipCode === '94123' ? 1.05 : 1.0; // 5% increase for high-CPI urban areas
+
+        // SF cost reference ($700/sq ft baseline)
+        const sfBaseCost = 700;
+        const nationalBaseCost = 175; // National avg $150–$200/sq ft
+        const locationFactor = zipAdjustments[zipCode] || zipAdjustments.default;
+
+        const sqFt = baseCosts[projectType][projectSize];
+        const baseCost = sqFt * nationalBaseCost;
+        const laborCost = laborHours[projectType][projectSize] * laborRate * locationFactor;
+        const materialCost = materialCosts[projectType][projectSize] * locationFactor;
+        const permitsOverhead = (baseCost + laborCost + materialCost) * 0.1;
+
+        const totalCost = (baseCost + laborCost + materialCost + permitsOverhead) * locationFactor * cpiFactor;
+        const costRange = `$${Math.round(totalCost * 0.9).toLocaleString()} - $${Math.round(totalCost * 1.1).toLocaleString()}`;
+
+        setCostEstimate(`Estimated ${projectType} (${projectSize}) cost in ZIP ${zipCode}: ${costRange}`);
+        setMessage(`Thank you! Your estimate has been recorded. A contractor will contact you at ${email}.`);
+      };
+
+      return (
+        <div class="bg-white p-8 rounded-lg shadow-lg max-w-lg w-full">
+          <h1 class="text-3xl font-bold mb-6 text-gray-800 text-center">National Home Remodeling Cost Estimator</h1>
+          <div class="mb-4">
+            <label class="block text-gray-700 font-semibold mb-2">Project Type</label>
+            <select
+              value={projectType}
+              onChange={(e) => setProjectType(e.target.value)}
+              class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option>Bathroom Remodel</option>
+              <option>Kitchen Remodel</option>
+            </select>
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700 font-semibold mb-2">Project Size</label>
+            <select
+              value={projectSize}
+              onChange={(e) => setProjectSize(e.target.value)}
+              class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option>Small</option>
+              <option>Medium</option>
+              <option>Large</option>
+            </select>
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700 font-semibold mb-2">ZIP Code</label>
+            <input
+              type="text"
+              value={zipCode}
+              onChange={(e) => setZipCode(e.target.value)}
+              placeholder="e.g., 94123"
+              class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div class="mb-6">
+            <label class="block text-gray-700 font-semibold mb-2">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <form name="lead-form" method="POST" data-netlify="true">
+            <input type="hidden" name="form-name" value="lead-form" />
+            <input type="hidden" name="projectType" value={projectType} />
+            <input type="hidden" name="projectSize" value={projectSize} />
+            <input type="hidden" name="zipCode" value={zipCode} />
+            <input type="hidden" name="email" value={email} />
+            <input type="hidden" name="costEstimate" value={costEstimate} />
+            <button
+              type="button"
+              onClick={calculateCost}
+              class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded transition duration-300"
+            >
+              Get Cost Estimate
+            </button>
+          </form>
+          {costEstimate && (
+            <p class="mt-4 text-center text-gray-600">{costEstimate}</p>
+          )}
+          {message && (
+            <p class="mt-2 text-center text-gray-600">{message}</p>
+          )}
+          <div class="mt-6 bg-gray-200 h-32 flex items-center justify-center">
+            <p class="text-gray-500">[Ad Placeholder - Insert Ad Network Code Here]</p>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<CostEstimator />);
+  </script>
+</body>
+</html>
